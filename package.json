@@ -1,0 +1,41 @@
+{
+  "name": "ci-demo-project",
+  "version": "1.0.0",
+  "description": "A sample Express Application to setup Continous Integration ",
+  "keywords": [
+    "Continous",
+    "Integration",
+    "DevOps",
+    "CI/CD",
+    "TravisCI"
+  ],
+  "homepage": "https://github.com/IT22000644/CI-Demo-Project#readme",
+  "bugs": {
+    "url": "https://github.com/IT22000644/CI-Demo-Project/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/IT22000644/CI-Demo-Project.git"
+  },
+  "license": "MIT",
+  "author": "Manilka Dikkumbura",
+  "type": "commonjs",
+  "main": "src/index.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "ts-node src/index.ts",
+    "build": "tsc",
+    "serve": "node dist/index.js",
+    "dev": "ts-node-dev --respawn --transpile-only src/index.ts"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.13.10",
+    "ts-node": "^10.9.2",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.8.2"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}
