@@ -1,0 +1,13 @@
+/node_modules
+
+**/*.test.js
+**/*.spec.js
+
+# Ignore the dist folder
+/dist
+
+# Ignore the .vscode folder
+/.vscode
+
+Dockerfile
+
