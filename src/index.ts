@@ -1,4 +1,7 @@
+import "dotenv/config";
 import express, { Request, Response } from "express";
+import { connectionDB } from "./database/db.connection";
+
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -12,5 +15,6 @@ app.post("/users/signup", (req: Request, res: Response) => {
 })
 
 app.listen(port, () => {
+    connectionDB();
     console.log(`Server is running on port ${port}`);
 })
