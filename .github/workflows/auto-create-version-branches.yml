@@ -1,0 +1,77 @@
+name: Auto Create QA/Release Version Branches
+
+on:
+  push:
+    branches:
+      - qa
+      - release
+
+jobs:
+  create-version-branches:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Capture merge context
+        id: context
+        run: |
+          echo "branch=${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
+          echo "msg=${GITHUB_HEAD_COMMIT_MESSAGE}" >> $GITHUB_OUTPUT
+
+      - name: Determine next version branch
+        id: version
+        run: |
+          BRANCH="${{ steps.context.outputs.branch }}"
+          MSG="${{ steps.context.outputs.msg }}"
+          SRC=""
+          DEST=""
+          VERSION=""
+
+          # ------------------------------------------
+          # CASE 1: dev -> qa  → create qa-vX.Y
+          # ------------------------------------------
+          if [ "$BRANCH" = "qa" ]; then
+            SRC=$(echo "$MSG" | grep -oE "Merge branch 'dev-v[0-9]+\.[0-9]+' into qa" || true)
+            if [ -n "$SRC" ]; then
+              VERSION=$(echo "$SRC" | grep -oE "v[0-9]+\.[0-9]+")
+              DEST="qa-$VERSION"
+            fi
+          fi
+
+          # ------------------------------------------
+          # CASE 2: qa -> release  → create release-vX.Y
+          # ------------------------------------------
+          if [ "$BRANCH" = "release" ]; then
+            SRC=$(echo "$MSG" | grep -oE "Merge branch 'qa' into release" || true)
+            if [ -n "$SRC" ]; then
+              # Find latest qa-vX.Y version to base off
+              VERSION=$(git branch -r | grep -oE "origin/qa-v[0-9]+\.[0-9]+" | sort -V | tail -n 1 | grep -oE "v[0-9]+\.[0-9]+")
+              if [ -n "$VERSION" ]; then
+                DEST="release-$VERSION"
+              fi
+            fi
+          fi
+
+          echo "src=$SRC" >> $GITHUB_OUTPUT
+          echo "dest=$DEST" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Stop if no matching merge detected
+        if: ${{ steps.version.outputs.dest == '' }}
+        run: echo "No valid merge pattern detected. Skipping branch creation."
+
+      - name: Create new version branch
+        if: ${{ steps.version.outputs.dest != '' }}
+        run: |
+          git fetch origin
+          git checkout ${{ steps.context.outputs.branch }}
+          git pull
+          git checkout -b ${{ steps.version.outputs.dest }}
+          git push origin ${{ steps.version.outputs.dest }}
+          echo "✅ Created branch: ${{ steps.version.outputs.dest }}"
