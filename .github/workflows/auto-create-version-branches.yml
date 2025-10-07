@@ -22,7 +22,9 @@ jobs:
         id: context
         run: |
           echo "branch=${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
-          echo "msg=${GITHUB_HEAD_COMMIT_MESSAGE}" >> $GITHUB_OUTPUT
+          MSG=$(git log -1 --pretty=%B)
+          echo "msg=$MSG" >> $GITHUB_OUTPUT
+          echo "🔍 Commit message: $MSG"
 
       - name: Determine next version branch
         id: version
