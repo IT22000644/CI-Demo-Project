@@ -18,11 +18,13 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Capture merge context
+      - name: Get latest commit message
         id: context
         run: |
           echo "branch=${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
-          echo "msg=${GITHUB_HEAD_COMMIT_MESSAGE}" >> $GITHUB_OUTPUT
+          MSG=$(git log -1 --pretty=%B)
+          echo "msg=$MSG" >> $GITHUB_OUTPUT
+          echo "🔍 Commit message: $MSG"
 
       - name: Determine next version branch
         id: version
@@ -33,30 +35,30 @@ jobs:
           DEST=""
           VERSION=""
 
-          # ------------------------------------------
-          # CASE 1: dev -> qa  → create qa-vX.Y
-          # ------------------------------------------
+          echo "Analyzing branch: $BRANCH"
+          echo "Message: $MSG"
+
+          # Case 1: dev -> qa => create qa-vX.Y
           if [ "$BRANCH" = "qa" ]; then
-            SRC=$(echo "$MSG" | grep -oE "Merge branch 'dev-v[0-9]+\.[0-9]+' into qa" || true)
+            SRC=$(echo "$MSG" | grep -oE "dev[-/]v[0-9]+\.[0-9]+" || true)
             if [ -n "$SRC" ]; then
               VERSION=$(echo "$SRC" | grep -oE "v[0-9]+\.[0-9]+")
               DEST="qa-$VERSION"
             fi
           fi
 
-          # ------------------------------------------
-          # CASE 2: qa -> release  → create release-vX.Y
-          # ------------------------------------------
+          # Case 2: qa -> release => create release-vX.Y
           if [ "$BRANCH" = "release" ]; then
-            SRC=$(echo "$MSG" | grep -oE "Merge branch 'qa' into release" || true)
+            SRC=$(echo "$MSG" | grep -oE "qa[-/]v[0-9]+\.[0-9]+" || true)
             if [ -n "$SRC" ]; then
-              # Find latest qa-vX.Y version to base off
-              VERSION=$(git branch -r | grep -oE "origin/qa-v[0-9]+\.[0-9]+" | sort -V | tail -n 1 | grep -oE "v[0-9]+\.[0-9]+")
-              if [ -n "$VERSION" ]; then
-                DEST="release-$VERSION"
-              fi
+              VERSION=$(echo "$SRC" | grep -oE "v[0-9]+\.[0-9]+")
+              DEST="release-$VERSION"
             fi
           fi
+
+          echo "SRC: $SRC"
+          echo "VERSION: $VERSION"
+          echo "DEST: $DEST"
 
           echo "src=$SRC" >> $GITHUB_OUTPUT
           echo "dest=$DEST" >> $GITHUB_OUTPUT
@@ -74,4 +76,4 @@ jobs:
           git pull
           git checkout -b ${{ steps.version.outputs.dest }}
           git push origin ${{ steps.version.outputs.dest }}
-          echo "✅ Created branch: ${{ steps.version.outputs.dest }}"
+          echo "Created branch: ${{ steps.version.outputs.dest }}"
