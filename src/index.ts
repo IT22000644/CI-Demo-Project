@@ -14,6 +14,10 @@ app.post("/users/signup", (req: Request, res: Response) => {
     res.status(201).send("Success");
 })
 
+app.get("/health", (req: Request, res: Response) => {
+    res.status(200).send("Success");
+})
+
 app.listen(port, () => {
     connectionDB();
     console.log(`Server is running on port ${port}`);
