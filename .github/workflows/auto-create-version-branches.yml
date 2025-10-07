@@ -50,13 +50,10 @@ jobs:
           # CASE 2: qa -> release  → create release-vX.Y
           # ------------------------------------------
           if [ "$BRANCH" = "release" ]; then
-            SRC=$(echo "$MSG" | grep -oE "Merge branch 'qa' into release" || true)
+            SRC=$(echo "$MSG" | grep -oE "Merge branch 'dev-v[0-9]+\.[0-9]+' into qa" || true)
             if [ -n "$SRC" ]; then
-              # Find latest qa-vX.Y version to base off
-              VERSION=$(git branch -r | grep -oE "origin/qa-v[0-9]+\.[0-9]+" | sort -V | tail -n 1 | grep -oE "v[0-9]+\.[0-9]+")
-              if [ -n "$VERSION" ]; then
-                DEST="release-$VERSION"
-              fi
+              VERSION=$(echo "$SRC" | grep -oE "v[0-9]+\.[0-9]+")
+              DEST="qa-$VERSION"
             fi
           fi
 
