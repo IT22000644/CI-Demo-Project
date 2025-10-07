@@ -18,7 +18,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Get latest commit message
+      - name: Capture merge context
         id: context
         run: |
           echo "branch=${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
@@ -35,30 +35,30 @@ jobs:
           DEST=""
           VERSION=""
 
-          echo "Analyzing branch: $BRANCH"
-          echo "Message: $MSG"
-
-          # Case 1: dev -> qa => create qa-vX.Y
+          # ------------------------------------------
+          # CASE 1: dev -> qa  → create qa-vX.Y
+          # ------------------------------------------
           if [ "$BRANCH" = "qa" ]; then
-            SRC=$(echo "$MSG" | grep -oE "dev[-/]v[0-9]+\.[0-9]+" || true)
+            SRC=$(echo "$MSG" | grep -oE "Merge branch 'dev-v[0-9]+\.[0-9]+' into qa" || true)
             if [ -n "$SRC" ]; then
               VERSION=$(echo "$SRC" | grep -oE "v[0-9]+\.[0-9]+")
               DEST="qa-$VERSION"
             fi
           fi
 
-          # Case 2: qa -> release => create release-vX.Y
+          # ------------------------------------------
+          # CASE 2: qa -> release  → create release-vX.Y
+          # ------------------------------------------
           if [ "$BRANCH" = "release" ]; then
-            SRC=$(echo "$MSG" | grep -oE "qa[-/]v[0-9]+\.[0-9]+" || true)
+            SRC=$(echo "$MSG" | grep -oE "Merge branch 'qa' into release" || true)
             if [ -n "$SRC" ]; then
-              VERSION=$(echo "$SRC" | grep -oE "v[0-9]+\.[0-9]+")
-              DEST="release-$VERSION"
+              # Find latest qa-vX.Y version to base off
+              VERSION=$(git branch -r | grep -oE "origin/qa-v[0-9]+\.[0-9]+" | sort -V | tail -n 1 | grep -oE "v[0-9]+\.[0-9]+")
+              if [ -n "$VERSION" ]; then
+                DEST="release-$VERSION"
+              fi
             fi
           fi
-
-          echo "SRC: $SRC"
-          echo "VERSION: $VERSION"
-          echo "DEST: $DEST"
 
           echo "src=$SRC" >> $GITHUB_OUTPUT
           echo "dest=$DEST" >> $GITHUB_OUTPUT
@@ -76,4 +76,4 @@ jobs:
           git pull
           git checkout -b ${{ steps.version.outputs.dest }}
           git push origin ${{ steps.version.outputs.dest }}
-          echo "Created branch: ${{ steps.version.outputs.dest }}"
+          echo "✅ Created branch: ${{ steps.version.outputs.dest }}"
