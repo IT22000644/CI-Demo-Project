@@ -1,4 +1,4 @@
-// generate an user Schema
+// generate an user Schema for the app
 
 interface User {
     id: string;
