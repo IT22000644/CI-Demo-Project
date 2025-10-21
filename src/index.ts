@@ -18,7 +18,7 @@ app.get("/health", (req: Request, res: Response) => {
     res.status(200).send("Success");
 })
 
-// just a random comment
+// just a random comment updated
 
 app.listen(port, () => {
     connectionDB();
