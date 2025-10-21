@@ -18,6 +18,12 @@ jobs:
         with:
           fetch-depth: 0
 
+      # 🔹 Important: Configure Git identity to allow merges/pushes
+      - name: Configure Git identity
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
       - name: Get latest commit message
         id: context
         run: |
