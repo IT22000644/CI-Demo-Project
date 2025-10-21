@@ -1,0 +1,101 @@
+name: Auto Promote Branches (Dev→QA & QA→Release)
+
+on:
+  push:
+    branches:
+      - dev
+      - qa
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get latest commit message
+        id: context
+        run: |
+          echo "branch=${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
+          MSG=$(git log -1 --pretty=%B)
+          echo "msg=$MSG" >> $GITHUB_OUTPUT
+          echo "🔍 Commit message: $MSG"
+
+      - name: Detect source version and target branch
+        id: version
+        run: |
+          BRANCH="${{ steps.context.outputs.branch }}"
+          MSG="${{ steps.context.outputs.msg }}"
+          SRC=""
+          DEST=""
+          TARGET=""
+          VERSION=""
+
+          echo "🧩 Analyzing promotion event for $BRANCH"
+
+          # ------------------------------------------
+          # CASE 1: dev-xx -> dev  → promote to qa / create qa-xx
+          # ------------------------------------------
+          if [ "$BRANCH" = "dev" ]; then
+            SRC=$(echo "$MSG" | grep -oE "dev[-_/][0-9]{2}" | head -n 1 || true)
+            if [ -n "$SRC" ]; then
+              VERSION=$(echo "$SRC" | grep -oE "[0-9]{2}")
+              DEST="qa"
+              TARGET="qa-$VERSION"
+            fi
+          fi
+
+          # ------------------------------------------
+          # CASE 2: qa-xx -> qa  → promote to release / create release-xx
+          # ------------------------------------------
+          if [ "$BRANCH" = "qa" ]; then
+            SRC=$(echo "$MSG" | grep -oE "qa[-_/][0-9]{2}" | head -n 1 || true)
+            if [ -n "$SRC" ]; then
+              VERSION=$(echo "$SRC" | grep -oE "[0-9]{2}")
+              DEST="release"
+              TARGET="release-$VERSION"
+            fi
+          fi
+
+          echo "✅ SRC: $SRC"
+          echo "✅ DEST: $DEST"
+          echo "✅ TARGET: $TARGET"
+          echo "✅ VERSION: $VERSION"
+
+          echo "src=$SRC" >> $GITHUB_OUTPUT
+          echo "dest=$DEST" >> $GITHUB_OUTPUT
+          echo "target=$TARGET" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Stop if no valid source detected
+        if: ${{ steps.version.outputs.dest == '' }}
+        run: echo "⚠️ No valid dev-xx or qa-xx pattern found. Skipping promotion."
+
+      - name: Merge to next environment
+        if: ${{ steps.version.outputs.dest != '' }}
+        run: |
+          git fetch origin
+          git checkout ${{ steps.version.outputs.dest }}
+          git pull origin ${{ steps.version.outputs.dest }}
+          git merge origin/${{ steps.context.outputs.branch }} -m "Auto merge ${{ steps.context.outputs.branch }} → ${{ steps.version.outputs.dest }} for version ${{ steps.version.outputs.version }}"
+          git push origin ${{ steps.version.outputs.dest }}
+          echo "✅ Merged ${{ steps.context.outputs.branch }} → ${{ steps.version.outputs.dest }}"
+
+      - name: Create next stage version branch
+        if: ${{ steps.version.outputs.dest != '' }}
+        run: |
+          git fetch origin
+          git checkout ${{ steps.version.outputs.dest }}
+          git pull
+          if git ls-remote --exit-code origin ${{ steps.version.outputs.target }}; then
+            echo "⚠️ Branch ${{ steps.version.outputs.target }} already exists. Skipping creation."
+          else
+            git checkout -b ${{ steps.version.outputs.target }}
+            git push origin ${{ steps.version.outputs.target }}
+            echo "✅ Created new branch: ${{ steps.version.outputs.target }}"
+          fi
