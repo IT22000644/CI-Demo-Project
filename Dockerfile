@@ -5,6 +5,8 @@ RUN npm ci
 COPY . /app
 RUN npm run build
 
+# Docker file updatd
+
 FROM gcr.io/distroless/nodejs22
 WORKDIR /app
 COPY --from=build /app/node_modules node_modules
