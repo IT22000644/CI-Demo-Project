@@ -1,4 +1,4 @@
-// generate an user Schema
+// generate an user Schema for the app 123
 
 interface User {
     id: string;
