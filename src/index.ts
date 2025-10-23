@@ -18,9 +18,12 @@ app.get("/health", (req: Request, res: Response) => {
     res.status(200).send("Success");
 })
 
-// just a random comment 123 123 123 123 123
+// just a random comment 123 123 123
 
 app.listen(port, () => {
     connectionDB();
     console.log(`Server is running on port ${port}`);
 })
+
+
+// test
