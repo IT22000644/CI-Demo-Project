@@ -18,7 +18,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      # 🔹 Important: Configure Git identity to allow merges/pushes
       - name: Configure Git identity
         run: |
           git config --global user.name "github-actions[bot]"
