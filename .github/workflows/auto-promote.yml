@@ -48,9 +48,9 @@ jobs:
           # CASE 1: dev-xx -> dev  → promote to qa / create qa-xx
           # ------------------------------------------
           if [ "$BRANCH" = "dev" ]; then
-            SRC=$(echo "$MSG" | grep -oE "dev[-_/][0-9]{2}" | head -n 1 || true)
+            SRC=$(echo "$MSG" | grep -oE "dev[-/][0-9]+" | head -n 1 || true)
             if [ -n "$SRC" ]; then
-              VERSION=$(echo "$SRC" | grep -oE "[0-9]{2}")
+              VERSION=$(echo "$SRC" | grep -oE "[0-9]+")
               DEST="qa"
               TARGET="qa-$VERSION"
             fi
@@ -60,9 +60,9 @@ jobs:
           # CASE 2: qa-xx -> qa  → promote to release / create release-xx
           # ------------------------------------------
           if [ "$BRANCH" = "qa" ]; then
-            SRC=$(echo "$MSG" | grep -oE "qa[-_/][0-9]{2}" | head -n 1 || true)
+            SRC=$(echo "$MSG" | grep -oE "qa[-_][0-9]+" | head -n 1 || true)
             if [ -n "$SRC" ]; then
-              VERSION=$(echo "$SRC" | grep -oE "[0-9]{2}")
+              VERSION=$(echo "$SRC" | grep -oE "[0-9]+")
               DEST="release"
               TARGET="release-$VERSION"
             fi
@@ -88,16 +88,22 @@ jobs:
           git fetch origin
           git checkout ${{ steps.version.outputs.dest }}
           git pull origin ${{ steps.version.outputs.dest }}
-          git merge origin/${{ steps.context.outputs.branch }} -m "Auto merge ${{ steps.context.outputs.branch }} → ${{ steps.version.outputs.dest }} for version ${{ steps.version.outputs.version }}"
-          git push origin ${{ steps.version.outputs.dest }}
-          echo "✅ Merged ${{ steps.context.outputs.branch }} → ${{ steps.version.outputs.dest }}"
+          if git merge origin/${{ steps.context.outputs.branch }} -m "Auto merge ${{ steps.context.outputs.branch}} -> ${{ steps.version.outputs.dest }} for version $${{ steps.version.outputs.version }}" --no-commit --no-ff; then
+            git push origin ${{ steps.version.outputs.dest }}
+            echo "✅ Merged ${{ steps.context.outputs.branch }} → ${{ steps.version.outputs.dest }}"
+          else
+            echo "❌ Merge conflict detected. Manual intervention required."
+            git merge --abort
+            exit 1
+          fi
+
 
       - name: Create next stage version branch
         if: ${{ steps.version.outputs.dest != '' }}
         run: |
           git fetch origin
           git checkout ${{ steps.version.outputs.dest }}
-          git pull
+          git pull origin $${{ steps.version.outputs.dest }}
           if git ls-remote --exit-code origin ${{ steps.version.outputs.target }}; then
             echo "⚠️ Branch ${{ steps.version.outputs.target }} already exists. Skipping creation."
           else
